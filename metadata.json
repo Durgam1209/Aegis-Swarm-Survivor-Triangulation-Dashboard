@@ -1,0 +1,7 @@
+{
+  "name": "Aegis Swarm: Survivor Triangulation Dashboard",
+  "description": "A high-tech tactical dashboard for controlling a drone swarm that locates survivors by triggering ultra-low-power wake-up signals on mobile devices. Uses simulated TDOA logic and Gemini AI for strategic analysis.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

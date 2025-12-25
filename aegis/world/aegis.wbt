@@ -1,0 +1,208 @@
+#VRML_SIM R2023b utf8
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/floors/protos/RectangleArena.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/factory/containers/protos/WoodenBox.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/obstacles/protos/OilBarrel.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/robots/dji/mavic/protos/Mavic2Pro.proto"
+
+WorldInfo {
+  info [
+    "AEGIS Swarm Simulation Environment"
+    "Scenario: Urban Search & Rescue (USAR)"
+    "Includes: 4 Drones, Debris Field, Hidden Survivors"
+  ]
+  title "AEGIS Swarm Tactical Field"
+  basicTimeStep 32
+  physicsDisableTime 1
+}
+
+Viewpoint {
+  orientation -0.57735 0.57735 0.57735 2.0944
+  position 0 0 30
+  follow "Alpha-01"
+}
+
+Fog {
+  color 0.05 0.05 0.1
+  visibilityRange 150
+}
+
+TexturedBackground {
+  texture "night_sky"
+}
+
+TexturedBackgroundLight {
+  luminance 0.2
+  castShadows TRUE
+}
+
+# The Search Area (100x100 meters to match your React App scale)
+RectangleArena {
+  floorSize 100 100
+  floorAppearance PBRAppearance {
+    baseColor 0.05 0.05 0.05
+    roughness 1
+    metalness 0
+    # Adds a faint glowing tactical grid to the floor
+    emissiveColor 0 0.1 0.2 
+    baseColorMap ImageTexture {
+      url [ "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/default/worlds/textures/grid.png" ]
+    }
+  }
+}
+
+# --- SURVIVORS (Represented as Red Capsules) ---
+
+# Survivor 1 (Hidden behind box)
+# Aesthetic Survivor
+Solid {
+  translation 15 15 0.5
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 1 0.1 0.1
+        emissiveColor 1 0 0 # High glow
+        roughness 1
+      }
+      geometry Capsule { height 1.8 radius 0.3 }
+    }
+    # Add a PointLight so the survivor "illuminates" the debris around them
+    PointLight {
+      color 1 0 0
+      intensity 0.5
+      radius 5
+    }
+  ]
+}
+
+# Survivor 2 (Open field)
+# Aesthetic Survivor
+Solid {
+  translation -20 30 0.5
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 1 0.1 0.1
+        emissiveColor 1 0 0 # High glow
+        roughness 1
+      }
+      geometry Capsule { height 1.8 radius 0.3 }
+    }
+    # Add a PointLight so the survivor "illuminates" the debris around them
+    PointLight {
+      color 1 0 0
+      intensity 0.5
+      radius 5
+    }
+  ]
+}
+# Survivor 3 (Deep debris)
+# Aesthetic Survivor
+Solid {
+  translation 40 -40 0.5
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 1 0.1 0.1
+        emissiveColor 1 0 0 # High glow
+        roughness 1
+      }
+      geometry Capsule { height 1.8 radius 0.3 }
+    }
+    # Add a PointLight so the survivor "illuminates" the debris around them
+    PointLight {
+      color 1 0 0
+      intensity 0.5
+      radius 5
+    }
+  ]
+}
+# --- DEBRIS & OBSTACLES (Blocking Vision/Signals) ---
+
+WoodenBox {
+  translation 12 12 0.6
+  size 2 2 1.2
+  mass 10
+}
+
+WoodenBox {
+  translation 14 16 0.6
+  size 1.5 1.5 1.2
+}
+
+OilBarrel {
+  translation 38 -38 0.6
+  height 1.2
+  radius 0.4
+}
+
+OilBarrel {
+  translation 42 -39 0.6
+  height 1.2
+  radius 0.4
+}
+
+WoodenBox {
+  translation -10 -10 1
+  size 5 1 2
+}
+# Add more varied debris
+WoodenBox {
+  translation 12 12 0.6
+  size 2 2 1.2
+  appearance PBRAppearance { baseColor 0.3 0.2 0.1 } # Weathered look
+}
+
+# Add a "Ruin" look using simple Shapes
+Solid {
+  translation -10 -10 1
+  children [
+    Shape {
+      appearance PBRAppearance { baseColor 0.2 0.2 0.2 }
+      geometry Box { size 5 0.5 3 } # A fallen concrete slab
+    }
+  ]
+}
+
+# --- AEGIS SWARM DRONES ---
+
+# Alpha-01
+Mavic2Pro {
+  translation 0 0 0.2
+  rotation 0 0 1 0
+  name "Alpha-01"
+  controller "drone_controller"
+  cameraSlot [
+    Camera {
+      name "camera"
+      width 640
+      height 480
+    }
+  ]
+}
+
+# Alpha-02
+Mavic2Pro {
+  translation 5 5 0.2
+  rotation 0 0 1 0
+  name "Alpha-02"
+  controller "drone_controller"
+}
+
+# Beta-01
+Mavic2Pro {
+  translation -5 5 0.2
+  rotation 0 0 1 0
+  name "Beta-01"
+  controller "drone_controller"
+}
+
+# Beta-02
+Mavic2Pro {
+  translation 5 -5 0.2
+  rotation 0 0 1 0
+  name "Beta-02"
+  controller "drone_controller"
+}

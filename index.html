@@ -1,0 +1,88 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AEGIS SWARM - Tactical SAR Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #020617;
+            color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .scanner-line {
+            height: 4px;
+            background: linear-gradient(to right, transparent, rgba(59, 130, 246, 0.4), transparent);
+            position: absolute;
+            width: 100%;
+            z-index: 5;
+            pointer-events: none;
+            animation: scan 6s linear infinite;
+        }
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+        .ping {
+            transform-box: fill-box;
+            transform-origin: center;
+            animation: ping 3s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+        @keyframes ping {
+            0% { transform: scale(1); opacity: 0.6; }
+            50% { opacity: 0.3; }
+            100% { transform: scale(12); opacity: 0; }
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 20px;
+            border: 2px solid #0f172a;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334155;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .bg-dot-pattern {
+            background-image: radial-gradient(rgba(59, 130, 246, 0.08) 1px, transparent 0);
+            background-size: 30px 30px;
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "lucide-react": "https://esm.sh/lucide-react@0.460.0",
+    "@google/genai": "https://esm.sh/@google/genai@0.1.1",
+    "react-dom/": "https://esm.sh/react-dom@18.3.1/",
+    "react/": "https://esm.sh/react@18.3.1/",
+    "react": "https://esm.sh/react@18.3.1",
+    "react-dom": "https://esm.sh/react-dom@18.3.1"
+  }
+}
+</script>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="module" src="index.tsx"></script>
+</body>
+</html>
