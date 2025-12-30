@@ -131,21 +131,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
                  </div>
               </div>
 
-              <button 
-                onClick={() => onToggleManual(selectedDrone.id)}
-                className={`w-full py-3.5 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 border ${
-                  selectedDrone.isManualControl 
-                    ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-500' 
-                    : 'bg-blue-600/20 border-blue-500/50 text-blue-400 hover:bg-blue-600/30'
-                }`}
-              >
-                <Joystick className={`w-4 h-4 ${selectedDrone.isManualControl ? 'animate-bounce' : ''}`} />
-                {selectedDrone.isManualControl ? 'Manual Engage' : 'Request Override'}
-              </button>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => onToggleManual(selectedDrone.id)}
+                  className={`flex-1 py-3.5 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 border ${
+                    selectedDrone.isManualControl 
+                      ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-500' 
+                      : 'bg-blue-600/20 border-blue-500/50 text-blue-400 hover:bg-blue-600/30'
+                  }`}
+                >
+                  <Joystick className={`w-4 h-4 ${selectedDrone.isManualControl ? 'animate-bounce' : ''}`} />
+                  {selectedDrone.isManualControl ? 'Manual Engage' : 'Request Override'}
+                </button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); onRemoveDrone(selectedDrone.id); }}
+                  className="px-4 py-3.5 rounded-2xl bg-red-600/10 border border-red-500/30 text-red-500 hover:bg-red-600 hover:text-white transition-all shadow-lg shadow-red-900/10"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           ) : (
             <div className="h-full border-2 border-dashed border-slate-800/50 rounded-[28px] flex flex-col items-center justify-center p-8 opacity-40">
-               <Info className="w-6 h-6 text-slate-600 mb-2" />
+               <div className="w-12 h-12 bg-slate-800/30 rounded-full flex items-center justify-center mb-4">
+                  <Activity className="w-6 h-6 text-slate-600" />
+               </div>
                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center leading-relaxed">Select active mesh node<br/>to drill down telemetry</p>
             </div>
           )}
@@ -178,7 +188,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </div>
                 <div className="flex items-center gap-4">
                   <span className={`text-[10px] font-black mono ${drone.battery < 15 ? 'text-red-500' : 'text-slate-500'}`}>{drone.battery.toFixed(0)}%</span>
-                  <ChevronRight className={`w-3.5 h-3.5 text-slate-700 group-hover:text-blue-500 transition-all ${selectedDroneId === drone.id ? 'rotate-90' : ''}`} />
+                  <div className="flex items-center gap-1 group/btn">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); onRemoveDrone(drone.id); }}
+                      className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-500 hover:text-red-500 hover:bg-red-500/10 transition-all"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                    <ChevronRight className={`w-3.5 h-3.5 text-slate-700 group-hover:text-blue-500 transition-all ${selectedDroneId === drone.id ? 'rotate-90' : ''}`} />
+                  </div>
                 </div>
               </div>
             ))}
