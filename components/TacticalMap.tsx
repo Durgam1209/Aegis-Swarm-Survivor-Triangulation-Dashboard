@@ -1,6 +1,6 @@
 
-import React,{ useMemo, useState } from 'react';
-
+// Added React import to fix namespace errors
+import React from 'react';
 import { Drone, Survivor } from '../types.ts';
 
 interface TacticalMapProps {

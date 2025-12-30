@@ -1,7 +1,16 @@
+// Fix for the 'aistudio' property error
+declare global {
+  interface Window {
+    aistudio?: {
+      hasSelectedApiKey: () => Promise<boolean>;
+      openSelectKey: () => Promise<void>;
+    };
+  }
+}
 
 import React,{ useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { 
-  ShieldAlert, BrainCircuit, MapPin, Send, Download, ShieldCheck, X, Video, Activity, Info, FileText, Sparkles, Navigation, Cpu
+  ShieldAlert, BrainCircuit, MapPin, Send, Download, ShieldCheck, X, Video, Activity, Info, FileText, Sparkles, Navigation, Cpu, RefreshCw, Maximize2, Minimize2
 } from 'lucide-react';
 import { TacticalMap } from './components/TacticalMap.tsx';
 import { Sidebar } from './components/Sidebar.tsx';
@@ -29,6 +38,8 @@ const App: React.FC = () => {
   const [insights, setInsights] = useState<AIInsight[]>([]);
   const [predictions, setPredictions] = useState<AIPrediction[]>([]);
   const [showAICenter, setShowAICenter] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isMapFullscreen, setIsMapFullscreen] = useState(false);
 
   const latestLogs = useRef(logs);
   const latestMetrics = useRef(metrics);
@@ -117,6 +128,10 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isMapFullscreen) {
+        setIsMapFullscreen(false);
+        return;
+      }
       if (!selectedDroneId) return;
       const drone = drones.find(d => d.id === selectedDroneId);
       if (!drone || !drone.isManualControl) return;
@@ -127,20 +142,48 @@ const App: React.FC = () => {
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) e.preventDefault();
     };
     window.addEventListener('keydown', handleKeyDown);
-    // FIX: Corrected typo 'removeBridge' to standard 'removeEventListener'
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedDroneId, drones, moveManualDrone]);
+  }, [selectedDroneId, drones, moveManualDrone, isMapFullscreen]);
 
   const handleExportArchive = async () => {
+    if (isExporting) return;
+    
+    if (typeof window.aistudio !== 'undefined') {
+      const hasKey = await window.aistudio.hasSelectedApiKey();
+      if (!hasKey) {
+        await window.aistudio.openSelectKey();
+        return;
+      }
+    }
+
+    setIsExporting(true);
     addLog('Synthesizing post-mission intelligence report...', 'info');
-    const report = await enhancedAI.generateMissionReport(metrics);
-    const reportBlob = new Blob([report], { type: 'text/markdown' });
-    const reportUrl = URL.createObjectURL(reportBlob);
-    const aReport = document.createElement('a');
-    aReport.href = reportUrl;
-    aReport.download = `AEGIS_INTEL_${Date.now()}.md`;
-    aReport.click();
-    addLog('MISSION DEBRIEF ARCHIVED', 'success');
+    
+    try {
+      const reportContent = await enhancedAI.generateMissionReport(latestMetrics.current);
+      const blob = new Blob([reportContent], { type: 'text/markdown;charset=utf-8' });
+      const url = window.URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `AEGIS_SAR_REPORT_${new Date().toISOString().replace(/[:.]/g, '-')}.md`;
+      document.body.appendChild(link);
+      link.click();
+      
+      setTimeout(() => {
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      }, 200);
+      
+      addLog('MISSION ARCHIVE: Report successfully generated and downloaded.', 'success');
+      setNotification('ARCHIVE DOWNLOADED');
+      setTimeout(() => setNotification(null), 3000);
+    } catch (err) {
+      console.error("Failed to export mission archive:", err);
+      addLog('ARCHIVE ERROR: Failed to synthesize report.', 'critical');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleDeployLocation = (survivor: Survivor) => {
@@ -159,61 +202,76 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen w-full bg-[#020617] overflow-hidden text-slate-100 font-sans">
-      <Sidebar 
-        drones={drones} metrics={metrics} selectedDroneId={selectedDroneId} 
-        onSelectDrone={setSelectedDroneId} onAddDrone={() => addDrone(addLog)}
-        onRemoveDrone={(id) => removeDrone(id, addLog)}
-        onExport={() => setShowDebrief(true)}
-        onToggleManual={(id) => toggleManualControl(id, addLog)}
-        isDemoRunning={isDemoRunning}
-        demoProgress={demoProgress}
-        currentStepDescription={currentStepDescription}
-        onStartDemo={runDemo}
-        onStopDemo={stopDemo}
-      />
+      {!isMapFullscreen && (
+        <Sidebar 
+          drones={drones} metrics={metrics} selectedDroneId={selectedDroneId} 
+          onSelectDrone={setSelectedDroneId} onAddDrone={() => addDrone(addLog)}
+          onRemoveDrone={(id) => removeDrone(id, addLog)}
+          onExport={() => setShowDebrief(true)}
+          onDownload={handleExportArchive}
+          isExporting={isExporting}
+          onToggleManual={(id) => toggleManualControl(id, addLog)}
+          isDemoRunning={isDemoRunning}
+          demoProgress={demoProgress}
+          currentStepDescription={currentStepDescription}
+          onStartDemo={runDemo}
+          onStopDemo={stopDemo}
+        />
+      )}
 
-      <main className="flex-1 flex flex-col relative border-x border-slate-800 h-full overflow-hidden">
-        <header className="h-20 border-b border-slate-800 flex items-center justify-between px-8 bg-[#0a1120]/95 backdrop-blur-xl z-40 shrink-0">
-          <div className="flex items-center gap-4">
-            <div className="bg-blue-600/20 p-2.5 rounded-xl border border-blue-500/30">
-              <ShieldAlert className="w-6 h-6 text-blue-400" />
+      <main className={`flex-1 flex flex-col relative ${!isMapFullscreen ? 'border-x border-slate-800' : ''} h-full overflow-hidden transition-all duration-500`}>
+        {!isMapFullscreen && (
+          <header className="h-20 border-b border-slate-800 flex items-center justify-between px-8 bg-[#0a1120]/95 backdrop-blur-xl z-40 shrink-0">
+            <div className="flex items-center gap-4">
+              <div className="bg-blue-600/20 p-2.5 rounded-xl border border-blue-500/30">
+                <ShieldAlert className="w-6 h-6 text-blue-400" />
+              </div>
+              <div>
+                <h1 className="text-xl font-black uppercase italic tracking-tighter leading-none">AEGIS <span className="text-blue-500">SWARM</span></h1>
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest mt-1 block">Tactical SAR Command</span>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-black uppercase italic tracking-tighter leading-none">AEGIS <span className="text-blue-500">SWARM</span></h1>
-              <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest mt-1 block">Tactical SAR Command</span>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setIsAIAutopilot(!isAIAutopilot)}
+                className={`flex items-center gap-3 border px-6 py-3 rounded-2xl transition-all font-black text-[10px] uppercase tracking-widest ${
+                  isAIAutopilot ? 'bg-red-600 border-red-500 text-white shadow-xl shadow-red-900/40' : 'bg-slate-800/50 hover:bg-slate-700 text-slate-400 border-slate-700'
+                }`}
+              >
+                <Cpu className={`w-4 h-4 ${isAIAutopilot ? 'animate-spin' : ''}`} />
+                {isAIAutopilot ? 'AI AUTOPILOT: ON' : 'ENGAGE AUTOPILOT'}
+              </button>
+              <button 
+                onClick={() => setShowAICenter(!showAICenter)} 
+                className={`flex items-center gap-3 border px-6 py-3 rounded-2xl transition-all font-black text-[10px] uppercase tracking-widest ${
+                  showAICenter ? 'bg-blue-600 border-blue-500 text-white shadow-xl shadow-blue-900/40' : 'bg-blue-600/10 hover:bg-blue-600/20 border-blue-500/30 text-blue-400'
+                }`}
+              >
+                <BrainCircuit className={`w-4 h-4 ${isAIThinking || isSweeping ? 'animate-spin' : ''}`} />
+                AEGIS_AI ANALYTICS
+              </button>
             </div>
-          </div>
-          <div className="flex gap-3">
-            <button 
-              onClick={() => setIsAIAutopilot(!isAIAutopilot)}
-              className={`flex items-center gap-3 border px-6 py-3 rounded-2xl transition-all font-black text-[10px] uppercase tracking-widest ${
-                isAIAutopilot ? 'bg-red-600 border-red-500 text-white shadow-xl shadow-red-900/40' : 'bg-slate-800/50 hover:bg-slate-700 text-slate-400 border-slate-700'
-              }`}
-            >
-              <Cpu className={`w-4 h-4 ${isAIAutopilot ? 'animate-spin' : ''}`} />
-              {isAIAutopilot ? 'AI AUTOPILOT: ON' : 'ENGAGE AUTOPILOT'}
-            </button>
-            <button 
-              onClick={() => setShowAICenter(!showAICenter)} 
-              className={`flex items-center gap-3 border px-6 py-3 rounded-2xl transition-all font-black text-[10px] uppercase tracking-widest ${
-                showAICenter ? 'bg-blue-600 border-blue-500 text-white shadow-xl shadow-blue-900/40' : 'bg-blue-600/10 hover:bg-blue-600/20 border-blue-500/30 text-blue-400'
-              }`}
-            >
-              <BrainCircuit className={`w-4 h-4 ${isAIThinking || isSweeping ? 'animate-spin' : ''}`} />
-              AEGIS_AI ANALYTICS
-            </button>
-          </div>
-        </header>
+          </header>
+        )}
 
-        {/* Center Section: Map + AI Panel */}
         <div className="flex-1 flex overflow-hidden relative">
           <div className="flex-1 relative flex flex-col bg-[#020617] bg-dot-pattern min-w-0">
             <StatusOverlay 
               survivorsFound={metrics.survivorsFound} 
               activeDrones={metrics.activeDrones} 
-              missionStartTime={metrics.missionStartTime} 
+              missionStartTime={metrics.missionStartTime}
+              isFullscreen={isMapFullscreen}
             />
             
+            {/* Fullscreen Toggle Button */}
+            <button 
+              onClick={() => setIsMapFullscreen(!isMapFullscreen)}
+              className="absolute top-6 right-6 z-[45] p-4 bg-slate-900/80 backdrop-blur-md border border-slate-700 hover:border-blue-500 rounded-2xl text-blue-400 shadow-2xl transition-all group"
+              title={isMapFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+            >
+              {isMapFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5 group-hover:scale-110 transition-transform" />}
+            </button>
+
             <TacticalMap 
               drones={drones} 
               survivors={survivors} 
@@ -224,7 +282,7 @@ const App: React.FC = () => {
             />
           </div>
 
-          {showAICenter && (
+          {showAICenter && !isMapFullscreen && (
             <div className="w-[450px] border-l border-slate-800 flex flex-col h-full animate-in slide-in-from-right duration-500 shrink-0">
               <AICommandCenter 
                 predictions={predictions} 
@@ -267,43 +325,44 @@ const App: React.FC = () => {
           )}
         </div>
 
-        {/* Reduced height footer (h-48 instead of h-56) to make map "slightly bigger" */}
-        <div className="h-48 border-t border-slate-800 bg-[#0a1120]/95 backdrop-blur-2xl p-6 overflow-hidden flex gap-10 shrink-0 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-          <div className="flex-1 flex flex-col gap-4 overflow-hidden border-r border-slate-800/50 pr-6">
-            <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><FileText className="w-3.5 h-3.5" /> Operations Log</h3>
-            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2">
-              {logs.map(log => (
-                <div key={log.id} className="text-[10px] mono flex gap-4 hover:bg-white/5 p-1.5 rounded-lg transition-colors group">
-                  <span className="text-slate-600 shrink-0 font-bold">[{log.timestamp}]</span>
-                  <span className={`uppercase font-black tracking-tight ${log.type === 'ai' ? 'text-blue-400' : log.type === 'critical' ? 'text-red-500' : log.type === 'success' ? 'text-green-500' : 'text-slate-500'}`}>{log.type}</span>
-                  <span className="text-slate-300 group-hover:text-white transition-colors leading-relaxed">{log.message}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="w-80 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><Activity className="w-3.5 h-3.5" /> Signal Monitor</h3>
-              <span className="text-[8px] font-black text-blue-500/80 uppercase">Confidence</span>
-            </div>
-            <div className="flex-1 space-y-2 overflow-y-auto custom-scrollbar">
-              {sortedSurvivors.map(s => (
-                <div key={s.id} className={`flex justify-between items-center bg-slate-900/40 p-3 rounded-2xl border transition-all ${s.isFriendly ? 'border-green-500/30 bg-green-900/5' : s.isReached ? 'border-blue-500/50 bg-blue-900/10' : s.signalType === 'SOS' ? 'border-red-900/50 bg-red-900/5' : 'border-slate-800'}`}>
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-black text-white mono leading-none">{s.id}</span>
-                    <span className={`text-[7px] font-black uppercase tracking-tighter ${s.isFriendly ? 'text-green-400' : s.signalType === 'SOS' ? 'text-red-400' : 'text-slate-500'}`}>{s.isFriendly ? 'OFFICER' : s.signalType}_BAND</span>
+        {!isMapFullscreen && (
+          <div className="h-48 border-t border-slate-800 bg-[#0a1120]/95 backdrop-blur-2xl p-6 overflow-hidden flex gap-10 shrink-0 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+            <div className="flex-1 flex flex-col gap-4 overflow-hidden border-r border-slate-800/50 pr-6">
+              <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><FileText className="w-3.5 h-3.5" /> Operations Log</h3>
+              <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2">
+                {logs.map(log => (
+                  <div key={log.id} className="text-[10px] mono flex gap-4 hover:bg-white/5 p-1.5 rounded-lg transition-colors group">
+                    <span className="text-slate-600 shrink-0 font-bold">[{log.timestamp}]</span>
+                    <span className={`uppercase font-black tracking-tight ${log.type === 'ai' ? 'text-blue-400' : log.type === 'critical' ? 'text-red-500' : log.type === 'success' ? 'text-green-500' : 'text-slate-500'}`}>{log.type}</span>
+                    <span className="text-slate-300 group-hover:text-white transition-colors leading-relaxed">{log.message}</span>
                   </div>
-                  <div className="flex flex-col items-end gap-1.5">
-                    <div className="w-28 h-1 bg-slate-800 rounded-full overflow-hidden">
-                      <div className={`h-full transition-all duration-1000 ${s.isFriendly ? 'bg-green-500' : s.isReached ? 'bg-blue-400' : s.signalType === 'SOS' ? 'bg-red-500' : 'bg-yellow-500'}`} style={{ width: `${s.confidence * 100}%` }} />
+                ))}
+              </div>
+            </div>
+            <div className="w-80 flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><Activity className="w-3.5 h-3.5" /> Signal Monitor</h3>
+                <span className="text-[8px] font-black text-blue-500/80 uppercase">Confidence</span>
+              </div>
+              <div className="flex-1 space-y-2 overflow-y-auto custom-scrollbar">
+                {sortedSurvivors.map(s => (
+                  <div key={s.id} className={`flex justify-between items-center bg-slate-900/40 p-3 rounded-2xl border transition-all ${s.isFriendly ? 'border-green-500/30 bg-green-900/5' : s.isReached ? 'border-blue-500/50 bg-blue-900/10' : s.signalType === 'SOS' ? 'border-red-900/50 bg-red-900/5' : 'border-slate-800'}`}>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[10px] font-black text-white mono leading-none">{s.id}</span>
+                      <span className={`text-[7px] font-black uppercase tracking-tighter ${s.isFriendly ? 'text-green-400' : s.signalType === 'SOS' ? 'text-red-400' : 'text-slate-500'}`}>{s.isFriendly ? 'OFFICER' : s.signalType}_BAND</span>
                     </div>
-                    <span className="text-[8px] font-black mono text-slate-500">{Math.round(s.confidence * 100)}%</span>
+                    <div className="flex flex-col items-end gap-1.5">
+                      <div className="w-28 h-1 bg-slate-800 rounded-full overflow-hidden">
+                        <div className={`h-full transition-all duration-1000 ${s.isFriendly ? 'bg-green-500' : s.isReached ? 'bg-blue-400' : s.signalType === 'SOS' ? 'bg-red-500' : 'bg-yellow-500'}`} style={{ width: `${s.confidence * 100}%` }} />
+                      </div>
+                      <span className="text-[8px] font-black mono text-slate-500">{Math.round(s.confidence * 100)}%</span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </main>
 
       {showDebrief && (
@@ -358,8 +417,17 @@ const App: React.FC = () => {
                     ))}
                   </div>
                 </div>
-                <button onClick={handleExportArchive} className="mt-12 w-full bg-blue-600 hover:bg-blue-500 text-white py-8 rounded-[40px] font-black uppercase text-sm flex items-center justify-center gap-5 transition-all shadow-2xl active:scale-95 group shrink-0">
-                  <Download className="w-6 h-6 group-hover:animate-bounce" /> Export Strategic Debrief
+                <button 
+                  onClick={handleExportArchive} 
+                  disabled={isExporting}
+                  className={`mt-12 w-full ${isExporting ? 'bg-slate-700 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500'} text-white py-8 rounded-[40px] font-black uppercase text-sm flex items-center justify-center gap-5 transition-all shadow-2xl active:scale-95 group shrink-0`}
+                >
+                  {isExporting ? (
+                    <RefreshCw className="w-6 h-6 animate-spin" />
+                  ) : (
+                    <Download className="w-6 h-6 group-hover:animate-bounce" />
+                  )}
+                  {isExporting ? 'Synthesizing...' : 'Export Strategic Debrief'}
                 </button>
               </div>
             </div>

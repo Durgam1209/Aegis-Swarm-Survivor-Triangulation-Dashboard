@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Battery, Radar, Target, PlusCircle, FileText, Trash2, Cpu, Joystick, Info, Activity, Clock, ChevronRight, Zap, TrendingDown, DollarSign } from 'lucide-react';
+import { Battery, Radar, Target, PlusCircle, FileText, Trash2, Cpu, Joystick, Info, Activity, Clock, ChevronRight, Zap, TrendingDown, DollarSign, Download, RefreshCw } from 'lucide-react';
 import { Drone, SwarmMetrics } from '../types.ts';
 import DemoControlPanel from './DemoControlPanel.tsx';
 
@@ -12,6 +12,8 @@ interface SidebarProps {
   onAddDrone: () => void;
   onRemoveDrone: (id: string) => void;
   onExport: () => void;
+  onDownload: () => void;
+  isExporting: boolean;
   onToggleManual: (id: string) => void;
   isDemoRunning: boolean;
   demoProgress: number;
@@ -21,7 +23,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
-  drones, metrics, selectedDroneId, onSelectDrone, onAddDrone, onRemoveDrone, onExport, onToggleManual,
+  drones, metrics, selectedDroneId, onSelectDrone, onAddDrone, onRemoveDrone, onExport, onDownload, isExporting, onToggleManual,
   isDemoRunning, demoProgress, currentStepDescription, onStartDemo, onStopDemo
 }) => {
   const selectedDrone = drones.find(d => d.id === selectedDroneId);
@@ -87,12 +89,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
             </div>
 
-            {/* Decorative background pulse for "Profit" feeling */}
             <div className="absolute -right-6 -top-6 w-16 h-16 bg-green-500/5 blur-3xl rounded-full" />
           </div>
         </div>
 
-        {/* Mission Simulation Module */}
         <DemoControlPanel 
           isRunning={isDemoRunning} 
           progress={demoProgress} 
@@ -101,7 +101,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           onStop={onStopDemo} 
         />
 
-        {/* Selected Unit Drill-Down Telemetry */}
         <div className="relative min-h-[160px]">
           {selectedDrone ? (
             <div className="bg-blue-600/10 p-5 rounded-[28px] border border-blue-500/30 animate-in slide-in-from-right-8 duration-300 shadow-2xl">
@@ -152,7 +151,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
 
-        {/* Active Nodes Overview */}
         <div className="space-y-4 pb-10">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Mesh Fleet</h2>
@@ -190,10 +188,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       <div className="p-6 border-t border-slate-800 bg-[#0a1120] flex flex-col gap-3">
         <button 
-          onClick={onExport}
-          className="w-full bg-[#020617] hover:bg-slate-900 text-slate-300 py-4.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all border border-slate-800 hover:border-blue-500/50 shadow-2xl"
+          onClick={onDownload}
+          disabled={isExporting}
+          className={`w-full bg-[#020617] ${isExporting ? 'cursor-not-allowed opacity-50' : 'hover:bg-slate-900 hover:border-blue-500/50'} text-slate-300 py-4.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all border border-slate-800 shadow-2xl`}
         >
-          <FileText className="w-4 h-4 text-blue-400" /> MISSION_ARCHIVE
+          {isExporting ? <RefreshCw className="w-4 h-4 text-blue-400 animate-spin" /> : <Download className="w-4 h-4 text-blue-400" />}
+          {isExporting ? 'SYNTHESIZING...' : 'MISSION_ARCHIVE'}
+        </button>
+        <button 
+          onClick={onExport}
+          className="w-full bg-[#020617] hover:bg-slate-900 text-slate-500 py-2 rounded-xl text-[8px] font-black uppercase tracking-[0.2em] transition-all border border-slate-800/50"
+        >
+          OPEN_DEBRIEF_VIEW
         </button>
       </div>
     </aside>

@@ -1,5 +1,6 @@
 
-import React,{ useState, useCallback, useRef, useEffect } from 'react';
+// Added React to imports to resolve namespace errors
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { enhancedAI } from '../services/enhancedAIService.ts';
 import { Drone, Survivor, SwarmMetrics, MissionLog, AIPrediction, AIInsight } from '../types.ts';
 
